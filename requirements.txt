@@ -1,0 +1,9 @@
+- pip
+    - tifffile
+    - opencv-python
+    - pandas
+    - matplotlib
+    - scikit-learn
+    - scikit-image
+    - scipy
+    - imagecodecs

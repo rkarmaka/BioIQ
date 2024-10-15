@@ -1,12 +1,19 @@
 - pip
-    - tifffile
-    - opencv-python
-    - pandas
-    - matplotlib
-    - scikit-learn
-    - scikit-image
-    - scipy
-    - imagecodecs
-    - bioio
-    - bioio-nd2
-    - PyWavelets
+    tifffile
+    opencv-python
+    pandas
+    matplotlib
+    scikit-learn
+    scikit-image
+    scipy
+    imagecodecs
+    bioio
+    bioio-nd2
+    PyWavelets
+    qtpy
+    mplcursors
+    superqt
+    fonticon-materialdesignicons6
+    vispy
+    ndv
+    pyqt6  # to remove

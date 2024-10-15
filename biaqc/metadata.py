@@ -3,7 +3,7 @@ import pandas as pd
 from bioio import BioImage
 import bioio_nd2
 from ome_types import to_dict
-
+import csv
 from typing import Any, Dict, List, Optional
 import logging
 
@@ -53,45 +53,22 @@ class Metadata:
         self.file_path = file_path
         self.image_extension = self._extract_file_extension()
         self.image_name = self._extract_image_name()
-        logger.debug(f"Set image path: {self.file_path}, "
-                     f"Name: {self.image_name}, Extension: {self.image_extension}")
 
     def _extract_file_extension(self) -> str:
-        """
-        Extracts the file extension from the file path.
-
-        Returns:
-            str: The file extension.
-        """
-        extension = self.file_path.split('/')[-1].split('.')[-1]
-        logger.debug(f"Extracted file extension: {extension}")
-        return extension
+        """Extracts the file extension from the file path."""
+        return self.file_path.split('/')[-1].split('.')[-1]
 
     def _extract_image_name(self) -> str:
-        """
-        Extracts the image name (without extension) from the file path.
-
-        Returns:
-            str: The image name.
-        """
-        name = self.file_path.split('/')[-1].split('.')[0]
-        logger.debug(f"Extracted image name: {name}")
-        return name
+        """Extracts the image name (without extension) from the file path."""
+        return self.file_path.split('/')[-1].split('.')[0]
 
     def _initialize_basic_metadata(self) -> Dict[str, Any]:
-        """
-        Creates a dictionary with basic metadata.
-
-        Returns:
-            Dict[str, Any]: The basic metadata dictionary.
-        """
-        metadata = {
+        """Creates a dictionary with basic metadata."""
+        return {
             'file_path': self.file_path,
             'image_name': self.image_name,
             'extension': self.image_extension
         }
-        logger.debug(f"Initialized basic metadata: {metadata}")
-        return metadata
 
     class ReadND2:
         """
@@ -99,184 +76,88 @@ class Metadata:
         """
 
         def __init__(self, parent: 'Metadata') -> None:
-            """
-            Initializes the ReadND2 class with a reference to the parent Metadata instance.
-
-            Args:
-                parent (Metadata): The parent Metadata instance.
-            """
+            """Initializes the ReadND2 class with a reference to the parent Metadata instance."""
             self.parent = parent
             self.plane_metadata_list: List[Dict[str, Any]] = []
-            self.image: Optional[Any] = None  # Replace Any with actual BioImage type
+            self.image: Optional[Any] = None
             self.metadata_dict: Dict[str, Any] = {}
             self.number_of_planes: int = 0
 
         def load_image(self) -> None:
-            """
-            Loads the ND2 image using BioImage and the specified reader.
-
-            Raises:
-                ValueError: If the file path is not set in the parent Metadata instance.
-            """
-            if not self.parent.file_path:
-                logger.error("File path is not set in the parent Metadata instance.")
-                raise ValueError("File path is not set in the parent Metadata instance.")
-
-            logger.info(f"Loading ND2 image from: {self.parent.file_path}")
-            self.image = BioImage(
-                f'{self.parent.file_path}',
-                reader=bioio_nd2.Reader
-            )
-            logger.debug("ND2 image loaded successfully.")
+            """Loads the ND2 image using BioImage and the specified reader."""
+            self.image = BioImage(f'{self.parent.file_path}', reader=bioio_nd2.Reader)
 
         def convert_metadata_to_dict(self) -> None:
-            """
-            Converts the image metadata to a dictionary.
-
-            Raises:
-                AttributeError: If the image has not been loaded.
-            """
-            if not self.image:
-                logger.debug("Image not loaded; loading now.")
-                self.load_image()
+            """Converts the image metadata to a dictionary."""
             self.metadata_dict = to_dict(self.image.metadata)
-            logger.debug(f"Converted metadata to dictionary: {self.metadata_dict}")
 
         def extract_instrument_metadata(self) -> Dict[str, Any]:
-            """
-            Extracts instrument-related metadata from the metadata dictionary.
-
-            Returns:
-                Dict[str, Any]: A dictionary containing instrument metadata.
-
-            Raises:
-                KeyError: If required instrument information is missing.
-            """
+            """Extracts instrument-related metadata from the metadata dictionary."""
             instruments = self.metadata_dict.get('instruments', [])
             if not instruments:
-                logger.error("No instruments information found in metadata.")
                 raise KeyError("No instruments information found in metadata.")
-
-            detectors = instruments[0].get('detectors', [])
-            objectives = instruments[0].get('objectives', [])
-
-            if not detectors or not objectives:
-                logger.error("Detectors or objectives information is missing in instruments metadata.")
-                raise KeyError("Detectors or objectives information is missing in instruments metadata.")
-
-            detector = detectors[0]
-            objective = objectives[0]
-
-            model = detector.get('model', 'Unknown Model')
-            serial_number = detector.get('serial_number', 'Unknown Serial Number')
-            lens_na = objective.get('lens_na', 'Unknown NA')
-            nominal_magnification = objective.get('nominal_magnification', 'Unknown Magnification')
-
-            instrument_metadata = {
-                'instrument_model': model,
-                'instrument_serial_number': serial_number,
-                'objective_lens_na': lens_na,
-                'objective_nominal_magnification': nominal_magnification
+            detector = instruments[0].get('detectors', [])[0]
+            objective = instruments[0].get('objectives', [])[0]
+            return {
+                'instrument_model': detector.get('model', 'Unknown Model'),
+                'instrument_serial_number': detector.get('serial_number', 'Unknown Serial Number'),
+                'objective_lens_na': objective.get('lens_na', 'Unknown NA'),
+                'objective_nominal_magnification': objective.get('nominal_magnification', 'Unknown Magnification')
             }
-            logger.debug(f"Extracted instrument metadata: {instrument_metadata}")
-            return instrument_metadata
 
         def determine_number_of_planes(self) -> None:
-            """
-            Retrieves the number of planes in the image.
-
-            Raises:
-                KeyError: If image or plane information is missing.
-            """
+            """Retrieves the number of planes in the image."""
             images = self.metadata_dict.get('images', [])
-            if not images:
-                logger.error("No images information found in metadata.")
-                raise KeyError("No images information found in metadata.")
-
             pixels = images[0].get('pixels', {})
-            planes = pixels.get('planes', [])
-
-            self.number_of_planes = len(planes)
-            logger.info(f"Number of planes: {self.number_of_planes}")
+            self.number_of_planes = len(pixels.get('planes', []))
 
         def extract_planes_metadata(self) -> None:
-            """
-            Processes each plane to extract and compile metadata.
-
-            Raises:
-                KeyError: If image or pixel information is missing.
-                TypeError: If plane metadata is not a dictionary.
-            """
+            """Processes each plane to extract and compile metadata."""
             images = self.metadata_dict.get('images', [])
-            if not images:
-                logger.error("No images information found in metadata.")
-                raise KeyError("No images information found in metadata.")
-
             pixels = images[0].get('pixels', {})
             planes = pixels.get('planes', [])
 
             for i in range(self.number_of_planes):
                 metadata: Dict[str, Any] = self.parent._initialize_basic_metadata()
-
-                # Extract and update with instrument metadata
                 instrument_metadata = self.extract_instrument_metadata()
                 metadata.update(instrument_metadata)
-
-                # Extract and update with pixel metadata excluding specific keys
-                pixel_metadata = {
-                    key: value
-                    for key, value in pixels.items()
-                    if key not in ['id', 'metadata_only', 'planes', 'channels']
-                }
-                metadata.update(pixel_metadata)
-
-                # Extract and update with plane-specific metadata
                 plane_metadata = planes[i]
-                if not isinstance(plane_metadata, dict):
-                    logger.error(f"Expected dict for plane metadata, got {type(plane_metadata)}")
-                    raise TypeError(f"Expected dict for plane metadata, got {type(plane_metadata)}")
                 metadata.update(plane_metadata)
-
-                logger.debug(f"Metadata for plane {i}: {metadata}")
                 self.plane_metadata_list.append(metadata)
 
         def extract_all_metadata(self) -> List[Dict[str, Any]]:
-            """
-            Orchestrates the reading and processing of all ND2 metadata.
-
-            Returns:
-                List[Dict[str, Any]]: A list of dictionaries containing metadata for each plane.
-            """
-            logger.info("Starting metadata extraction process.")
+            """Orchestrates the reading and processing of all ND2 metadata."""
             self.load_image()
             self.convert_metadata_to_dict()
             self.determine_number_of_planes()
             self.extract_planes_metadata()
-            logger.info("Completed metadata extraction process.")
             return self.plane_metadata_list
-        
-    def get_nd2_metadata(self) -> List[Dict[str, Any]]:
-        """
-        Retrieves ND2 metadata by utilizing the nested ReadND2 class.
-
-        Returns:
-            List[Dict[str, Any]]: A list of dictionaries containing metadata for each plane.
-        
-        Raises:
-            Exception: Propagates exceptions raised during metadata extraction.
-        """
-        reader = Metadata.ReadND2(self)
-        return reader.extract_all_metadata()
 
     def get_nd2_metadata(self) -> List[Dict[str, Any]]:
-        """
-        Public method to get ND2 metadata using the nested ReadND2 class.
-
-        Returns:
-            List[Dict[str, Any]]: A list of dictionaries containing metadata for each plane.
-        """
+        """Retrieves ND2 metadata using the nested ReadND2 class."""
         reader = self.ReadND2(self)
         return reader.extract_all_metadata()
+
+    def process_folder(self, folder_path: str, output_csv: str) -> None:
+        """
+        Processes all ND2 files in a folder and saves their metadata to a CSV file.
+
+        Args:
+            folder_path (str): The path to the folder containing ND2 files.
+            output_csv (str): The path to the output CSV file.
+        """
+        all_metadata = []
+        for file_name in os.listdir(folder_path):
+            if file_name.endswith('.nd2'):
+                file_path = os.path.join(folder_path, file_name)
+                self.set_image_path(file_path)
+                metadata = self.get_nd2_metadata()
+                all_metadata.extend(metadata)
+
+        # Save results to CSV
+        # Convert metadata list to a pandas DataFrame and save to CSV
+        df = pd.DataFrame(all_metadata)
+        df.to_csv(output_csv, index=False)
 
 
 

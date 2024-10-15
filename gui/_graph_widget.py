@@ -17,10 +17,19 @@ import pandas as pd
 import mplcursors
 from matplotlib.axes import Axes
 from qtpy.QtCore import Signal
+from superqt.utils import signals_blocked
+
+
 
 # from _widgets.utils import DATA_PATH
 
-PCA = "test"
+ALL = "All Features"
+INTENSITY = "Intensity Features"
+NOISE = "Noise Features"
+SHARPNESS = "Sharpness Features"
+TEXTURE = "Texture Features"
+
+ITEMS = [ALL, INTENSITY, NOISE, SHARPNESS, TEXTURE]
 
 
 class GraphWidget(QGroupBox):
@@ -29,18 +38,21 @@ class GraphWidget(QGroupBox):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
-        self.data_df: pd.DataFrame | None = None
+        self.feature_pca_df: pd.DataFrame | None = None
 
         self.on_add: Callable | None = None
 
-        self.pca: Axes | None = None
+        self.all: Axes | None = None
+        self.intensity: Axes | None = None
+        self.noise: Axes | None = None
+        self.sharpness: Axes | None = None
+        self.texture: Axes | None = None
 
         self.pca_type_combo = QComboBox()
-        self.pca_type_combo.addItems(["", PCA])
+        self.pca_type_combo.addItems(["", *ITEMS])
         self.pca_type_combo.currentTextChanged.connect(self._plot)
 
         self.channel_combo = QComboBox()
-        self.channel_combo.addItems(["Channel 1", "Channel 2", "Channel 3"])
         self.channel_combo.currentTextChanged.connect(self._plot)
 
         label = QLabel("Plot:")
@@ -66,26 +78,47 @@ class GraphWidget(QGroupBox):
         main_layout.addLayout(combo_layout)
         main_layout.addWidget(self.canvas)
 
-    def set_dataframe(self, image_name: str) -> None:
-        ...
-        # self.data_df = pd.read_csv(f"{DATA_PATH['csv_files']}/{image_name}.csv")
+    def set_dataframe(self, dataframe: pd.DataFrame) -> None:
+        self.feature_pca_df = dataframe
 
-        # if text := self.combobox.currentText():
-        #     self._plot(text)
+        num_channels = dataframe.C.nunique()
+        chs = [f"Channels {ch+1}" for ch in range(num_channels)]
+        with signals_blocked(self.channel_combo):
+            self.channel_combo.clear()
+            self.channel_combo.addItems(chs)
+        
+        if text := self.pca_type_combo.currentText():
+            self._plot(text)
 
     def _plot(self, plot_type: str) -> None:
         self.figure.clear()
 
-        if plot_type == "": # or self.data_df is None:
+        if plot_type == "" or self.feature_pca_df is None:
             self.canvas.draw()
             return
-
-        if plot_type == PCA:
+        
+        ch = self.channel_combo.currentIndex()
+        temp_data = self.feature_pca_df[self.feature_pca_df.C==ch]
+        
+        if plot_type == ALL:
             ax = self.figure.add_subplot(1, 1, 1)
+            ax.scatter(temp_data['all_pca_1'], temp_data['all_pca_2'], c='green')
+            ax.set_xlabel('PCA 1 for All Features')
+            ax.set_ylabel('PCA 2 for All Features')
 
-            x = np.random.rand(100)
-            y = np.random.rand(100)
-            self.pca = ax.scatter(x, y, c="green")
+        if plot_type == INTENSITY:
+            ax = self.figure.add_subplot(1, 1, 1)
+            self.intensity = ax.scatter(temp_data['intensity_pca_1'], temp_data['intensity_pca_2'], c='green')
+            ax.set_xlabel('PCA 1 for Intensity Features')
+            ax.set_ylabel('PCA 2 for Intensity Features')
+
+
+
+
+
+
+
+            
 
             cursor = mplcursors.cursor(ax)
 
@@ -98,16 +131,18 @@ class GraphWidget(QGroupBox):
             with contextlib.suppress(AttributeError):
                 sel.annotation.set_visible(False)
             if plot_type:
-                graph = self.pca if plot_type == PCA else None
+                graph = self.intensity if plot_type == INTENSITY else None
                 if graph is None:
                     return
                 # reset all face colors to green and set the selected point to magenta
-                colors = ["green"] * len(self.pca.get_offsets())
+                colors = ["green"] * len(self.intensity.get_offsets())
                 colors[sel.target.index] = "magenta"
-                self.pca.set_facecolors(colors)
+                self.intensity.set_facecolors(colors)
                 self.canvas.draw_idle()
-            # if signal:
-            #     self.pointSelected.emit(info)
+            if signal:
+                path = self.feature_pca_df['file_path'][sel.target.index]
+                print(f'---------------------- {path}')
+                self.pointSelected.emit(path) # .T, .C, .Z
 
         self.on_add = on_add
 

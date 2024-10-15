@@ -7,14 +7,21 @@ class FeaturePCA:
         self.data = None
         self.pca_results = {}
 
-    def set_data(self, data_path: str):
+    def set_data(self, data: str | pd.DataFrame):
         """
         Loads and sets the data from a CSV file.
 
         Args:
             data_path (str): Path to the CSV file containing the data.
         """
-        self.data = pd.read_csv(data_path)
+        print(type(data))
+        if isinstance(data, str):
+            self.data = pd.read_csv(data)
+        elif isinstance(data, pd.DataFrame):
+            self.data = data
+        else:
+            raise ValueError("Wrong data type...")
+
     
     def _get_pca(self, df: pd.DataFrame, n_components=2):
         """
@@ -62,7 +69,7 @@ class FeaturePCA:
         """
         texture_columns = ['contrast', 'dissimilarity', 'homogeneity', 'energy', 'correlation', 'ASM', 
                            'lbp_bin_0', 'lbp_bin_1', 'lbp_bin_2', 'lbp_bin_3', 'lbp_bin_4', 'lbp_bin_5',
-                             'lbp_bin_6', 'lbp_bin_7', 'lbp_bin_8', 'lbp_bin_9']
+                             'lbp_bin_6', 'lbp_bin_7', 'lbp_bin_8']
         texture_df = self.data[texture_columns]
         texture_pca = self._get_pca(texture_df, n_components)
         self.pca_results['texture'] = texture_pca
@@ -109,11 +116,19 @@ class FeaturePCA:
         Returns:
             pd.DataFrame: DataFrame with all PCA results.
         """
-        feature_columns = [col for col in self.data.columns if col not in ['file_path', 'image_name', 'extension', 'T', 'C', 'Z', 'histogram']]
+        feature_columns = [col for col in self.data.columns if col not in ['file_path', 'image_name', 'extension', 'T', 'C', 'Z', 'histogram', 'lbp_bin_9']]
         feature_df = self.data[feature_columns]
+        print(f'---------------------- {feature_df.columns}')
         all_pca = self._get_pca(feature_df, n_components)
         self.pca_results['all'] = all_pca
         return all_pca
+
+    def _get_pcas(self):
+        self.get_intensity_pca() 
+        self.get_texture_pca()
+        self.get_noise_pca()
+        self.get_sharpness_pca()
+        # self.get_all_pca() 
 
     def combine_pcas(self):
         """
@@ -124,6 +139,8 @@ class FeaturePCA:
         """
         combined_df = pd.DataFrame()
         combined_df[['file_path', 'image_name', 'extension', 'T', 'C', 'Z', 'histogram']] = self.data[['file_path', 'image_name', 'extension', 'T', 'C', 'Z', 'histogram']]
+
+        self._get_pcas()
 
         # Add all PCA components for each feature group to the combined dataframe
         if 'intensity' in self.pca_results:
@@ -138,7 +155,7 @@ class FeaturePCA:
             combined_df = pd.concat([combined_df, self.pca_results['all'].add_prefix('pca_all_')], axis=1)
 
         # Convert the combined dataframe to a list of dictionaries
-        return combined_df.to_dict(orient='records')
+        return combined_df
     
 
 class MetadataAnalysis:
@@ -150,11 +167,22 @@ class MetadataAnalysis:
         self.metadata = None
         self.csv_path = None
 
-    def set_csv_path(self, path: str):
-        """Sets the CSV path and loads the data."""
-        self.csv_path = path
-        self.metadata = pd.read_csv(path)
+    def set_data(self, data: str | pd.DataFrame):
+        """
+        Loads and sets the data from a CSV file.
+
+        Args:
+            data_path (str): Path to the CSV file containing the data.
+        """
+        if isinstance(data, str):
+            self.metadata = pd.read_csv(data)
+        elif isinstance(data, pd.DataFrame):
+            self.metadata = data
+        else:
+            raise ValueError("Wrong data type...")
+
         self.metadata['delta_time'] = self.metadata.groupby(['image_name', 'the_c'])['delta_t'].diff()
+
 
     def _convert_time(self):
         df = self.metadata
@@ -173,9 +201,13 @@ class MetadataAnalysis:
 
     def _get_generic_info(self, column):
         """Generic function to return the number of unique items and their values."""
-        n_unique = self.metadata[column].nunique()
-        unique_values = self.metadata[column].unique()
-        return n_unique, unique_values
+        info = self.metadata.get(column, None)
+        if info is not None:
+            n_unique = info.nunique()
+            unique_values = info.unique()
+            return n_unique, unique_values
+
+        return None, None
 
     def get_extension(self):
         n_extension, extensions = self._get_generic_info('extension')
@@ -203,6 +235,8 @@ class MetadataAnalysis:
 
     def get_bit_depth(self):
         n_bit_depth, bit_depths = self._get_generic_info('significant_bits')
+        if n_bit_depth is None:
+            return f"[x] Can't find bit depth."
         if n_bit_depth > 1:
             return f"[x] More than single bit depth found. Found bit depths are {bit_depths}."
         return f"[v] All images are acquired with {bit_depths[0]}."
@@ -221,27 +255,28 @@ class MetadataAnalysis:
 
     def get_size_z(self):
         n_size_z, size_z = self._get_generic_info('size_z')
-        if n_size_z > 1:
-            return f"[?] 3D z-stack with different z-depth."
-        elif size_z != 1:
-            return f"[?] 3D z-stack with single z-depth of {size_z[0]}."
+        # if n_size_z > 1:
+        #     return f"[?] 3D z-stack with different z-depth."
+        # elif size_z != 1:
+        #     return f"[?] 3D z-stack with single z-depth of {size_z[0]}."
         return f"[?] Not a z-stack."
 
     def get_size_t(self):
         n_size_t, size_t = self._get_generic_info('size_t')
-        if n_size_t > 1:
-            return f"[?] Time series data with different time."
-        elif size_t != 1:
-            return f"[?] Time series data with {size_t[0]} frames per image."
+        # if n_size_t > 1:
+        #     return f"[?] Time series data with different time."
+        # elif size_t != 1:
+        #     return f"[?] Time series data with {size_t[0]} frames per image."
         return f"[?] Not a time series data."
 
     def get_size_c(self):
         n_size_c, size_c = self._get_generic_info('size_c')
-        if n_size_c > 1:
-            return f"[x] Different number of channels found."
-        elif size_c == 1:
-            return f"[?] Single channel image."
-        return f"[v] Multi-channel image with {size_c[0]} channels per image."
+        # if n_size_c > 1:
+        #     return f"[x] Different number of channels found."
+        # elif size_c == 1:
+        #     return f"[?] Single channel image."
+        # return f"[v] Multi-channel image with {size_c[0]} channels per image."
+        return f"[v] Multi-channel image with channels per image."
 
     def get_physical_x(self):
         n_physical_size_x, physical_size_x = self._get_generic_info('physical_size_x')

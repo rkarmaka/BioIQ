@@ -218,11 +218,7 @@ class Sharpness:
         
         # Convert to float32 for precision
         img_float = np.float32(self.image)
-
-        # Step 2: Apply Fourier Transform
         f = np.fft.fft2(img_float)
-
-        # Step 3: Shift the zero-frequency component to the center
         fshift = np.fft.fftshift(f)
 
         # Compute the magnitude spectrum

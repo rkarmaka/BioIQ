@@ -6,7 +6,6 @@ envs
 
 # Ignore Flask app files
 /templates
-app.py
 /static
 /docs
 

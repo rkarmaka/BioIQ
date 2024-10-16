@@ -142,7 +142,6 @@ class GraphWidget(QGroupBox):
             # hide the annotation when the point is deselected
             with contextlib.suppress(AttributeError):
                 sel.annotation.set_visible(False)
-            print(plot_type)
             if plot_type:
                 graph = self._get_graph(plot_type)
                 if graph is None:

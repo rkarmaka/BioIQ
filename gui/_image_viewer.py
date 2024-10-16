@@ -79,7 +79,7 @@ class ImageViewer(QGroupBox):
 
         self._image: None | str | Path = None\
         
-        self._ndv_file: None | DataArray = None
+        self._ndv_file: None | tuple[DataArray, int, int, int] = None
 
         # LUT controls -----------------------------------------------------------
 
@@ -153,11 +153,11 @@ class ImageViewer(QGroupBox):
         self._viewer.view.camera.set_range(margin=0)
 
     @property
-    def ndv_file(self) -> None | DataArray:
+    def ndv_file(self) -> None | tuple[DataArray, int, int, int]:
         return self._ndv_file
     
     @ndv_file.setter
-    def ndv_file(self, file: None | DataArray) -> None:
+    def ndv_file(self, file: None | tuple[DataArray, int, int, int]) -> None:
         self._ndv_file = file
 
     def _on_clims_changed(self, range: tuple[float, float]) -> None:
@@ -180,7 +180,9 @@ class ImageViewer(QGroupBox):
     def _open_with_ndv(self) -> None:
         if self._ndv_file is None:
             return
-        ndv = NDViewer(self._ndv_file, parent=self)
+        ary, c, z, t = self._ndv_file
+        ndv = NDViewer(ary, parent=self)
+        ndv.set_current_index({"C": c, "Z": z, "T": t})
         ndv.setWindowFlags(Qt.WindowType.Dialog)
         ndv.show()
 

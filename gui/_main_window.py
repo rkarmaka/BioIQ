@@ -124,7 +124,7 @@ class QCMainWindow(QMainWindow):
             self._files[path] = _file.xarray_data
             image = _file.xarray_data.isel(C=c, Z=z, T=t).to_numpy()
         self.image_viewer.setData(image)
-        self.image_viewer.ndv_file = self._files[path]
+        self.image_viewer.ndv_file = (self._files[path], c, z, t)
         print(
             f"-----------\nfile_shape: {self._files[path].shape},\n"
             f"C: {c}, Z: {z}, T: {t},\nimage shape: {image.shape},\n"

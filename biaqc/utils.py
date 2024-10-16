@@ -6,6 +6,7 @@ import tifffile
 from datetime import datetime
 from bioio import BioImage
 import bioio_nd2
+from ome_types import to_dict
 import pandas as pd
 from tqdm import tqdm
 from .feature_extraction import IntensityFeatures, Noise, Sharpness, TextureFeatures
@@ -128,6 +129,11 @@ class ND2ImageProcessor:
         image = BioImage(self.file_path, reader=bioio_nd2.Reader)
         return image
     
+    def _get_bit_depth(self, image):
+        """Reads the bit-depth from image."""
+        image_metadata_dict = to_dict(image.metadata)
+        return image_metadata_dict.get("images", [])[0].get("pixels", []).get("significant_bits", [])
+
 
     def _extract_file_extension(self) -> str:
         """
@@ -181,9 +187,9 @@ class ND2ImageProcessor:
         logger.debug(f"Extracted image name: {name}")
         return name
 
-    def extract_features_from_slice(self, XY_image):
+    def extract_features_from_slice(self, XY_image, bit_depth):
         """Extract features from the given XY slice. You can modify this method based on your feature extraction logic."""
-        intensity = IntensityFeatures()
+        intensity = IntensityFeatures(bit_depth=bit_depth)
         intensity.set_image(image=XY_image)
         intensity_features = intensity.extract_all_features()
         # all_features.update(intensity_features)
@@ -211,6 +217,7 @@ class ND2ImageProcessor:
         """Processes the ND2 image and returns a list of feature dictionaries for each XY slice."""
         results = []
         image = self.read_nd2()
+        bit_depth = self._get_bit_depth(image)
         slices = self.extract_XY_slices(image)
 
         # Extract features for each XY slice and add to results list
@@ -222,7 +229,7 @@ class ND2ImageProcessor:
                 'Z': z,
             }
             features.update(row)
-            features.update(self.extract_features_from_slice(XY_image))
+            features.update(self.extract_features_from_slice(XY_image, bit_depth))
             
             results.append(features)
         

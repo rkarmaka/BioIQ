@@ -178,12 +178,15 @@ class MetadataAnalysis:
         else:
             raise ValueError("Wrong data type...")
         
-        
         self.metadata['delta_time'] = self.metadata.groupby(['image_name', 'the_c'])['delta_t'].diff()
 
     def _convert_time(self):
         df = self.metadata
-        time_unit = df.delta_t_unit.unique()[0].split('.')[-1].lower()
+        try:
+            time_unit = df.delta_t_unit.unique()[0].name.lower()
+        except:
+            time_unit = df.delta_t_unit.unique()[0].split('.')[-1].lower()
+        
         delta_time = df.delta_time[3]
         units = ['millisecond', 'second', 'minute', 'hour', 'day', 'month', 'year']
         index = units.index(time_unit)
@@ -323,15 +326,13 @@ class MetadataAnalysis:
         return f"[v] All images acquired have {np.round(physical_size_y[0], 4)} micrometers physical size y."
 
     def get_delta_t(self):
-        try:
-            diviser, unit = self._convert_time()
-            self.metadata['delta_time'] = np.round(self.metadata['delta_time'] / diviser, 2)
-            mean_time = self.metadata['delta_time'].mean()
-            std_time = self.metadata['delta_time'].std()
-            return f"[v] Time between frames: {np.round(mean_time, 4)} +/- {np.round(std_time, 4)} {unit}s."
+        diviser, unit = self._convert_time()
+        self.metadata['delta_time'] = np.round(self.metadata['delta_time'] / diviser, 2)
+        mean_time = self.metadata['delta_time'].mean()
+        std_time = self.metadata['delta_time'].std()
+        return f"[v] Time between frames: {np.round(mean_time, 4)} +/- {np.round(std_time, 4)} {unit}s."
         
-        except:
-            return f"[x] Cound not find time delta."
+            # return f"[x] Cound not find time delta."
 
     def generate_report(self):
         """Generates a report by calling all functions and combining their outputs into a list of strings."""

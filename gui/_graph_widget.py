@@ -135,6 +135,7 @@ class GraphWidget(QGroupBox):
             return
 
         cursor = mplcursors.cursor(ax)
+        
 
         @cursor.connect("add")  # type: ignore [misc]
         def on_add(sel: mplcursors.Selection) -> None:

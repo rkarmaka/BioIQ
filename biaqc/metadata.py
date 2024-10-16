@@ -32,6 +32,7 @@ def read_tiff_metadata(file_path):
 class Metadata:
     """
     A class to handle metadata extraction from ND2 image files.
+    TODO: Clean up extractions methods. Remove repeats.
     """
 
     def __init__(self) -> None:
@@ -108,6 +109,24 @@ class Metadata:
                     "nominal_magnification", "Unknown Magnification"
                 ),
             }
+        
+        def extract_pixels_metadata(self) -> Dict[str, Any]:
+            """Extracts pixel-related metadata from the metadata dictionary."""
+            images = self.metadata_dict.get("images", [])
+            pixels = images[0].get("pixels", {})
+            return {
+                "significant_bits": pixels.get("significant_bits", []),
+                "size_x": pixels.get("size_x", []),
+                "size_y": pixels.get("size_y", []),
+                "size_z": pixels.get("size_z", []),
+                "size_c": pixels.get("size_c", []),
+                "size_t": pixels.get("size_t", []),
+                "physical_size_x": pixels.get("physical_size_x", []),
+                "physical_size_y": pixels.get("physical_size_y", []),
+                "physical_size_z": pixels.get("physical_size_z", [])
+            }
+
+
 
         def determine_number_of_planes(self) -> None:
             """Retrieves the number of planes in the image."""
@@ -125,6 +144,8 @@ class Metadata:
                 metadata: Dict[str, Any] = self.parent._initialize_basic_metadata()
                 instrument_metadata = self.extract_instrument_metadata()
                 metadata.update(instrument_metadata)
+                pixels_metadata = self.extract_pixels_metadata()
+                metadata.update(pixels_metadata)
                 plane_metadata = planes[i]
                 metadata.update(plane_metadata)
                 self.plane_metadata_list.append(metadata)

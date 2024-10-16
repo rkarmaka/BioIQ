@@ -101,7 +101,7 @@ class GraphWidget(QGroupBox):
             return
         
         ch = self.channel_combo.currentIndex()
-        temp_data = self.feature_pca_df[self.feature_pca_df.C==ch]
+        temp_data = self.feature_pca_df[self.feature_pca_df.C==ch].reset_index()
         ax = self.figure.add_subplot(1, 1, 1)
 
         if plot_type == ALL:
@@ -135,6 +135,7 @@ class GraphWidget(QGroupBox):
             return
 
         cursor = mplcursors.cursor(ax)
+        
 
         @cursor.connect("add")  # type: ignore [misc]
         def on_add(sel: mplcursors.Selection) -> None:
@@ -152,10 +153,11 @@ class GraphWidget(QGroupBox):
                 graph.set_facecolors(colors)
                 self.canvas.draw_idle()
 
-            path = self.feature_pca_df['file_path'][sel.index]
-            c = self.feature_pca_df['C'][sel.index]
-            z = self.feature_pca_df['Z'][sel.index]
-            t = self.feature_pca_df['T'][sel.index]
+
+            path = temp_data['file_path'][sel.index]
+            c = temp_data['C'][sel.index]
+            z = temp_data['Z'][sel.index]
+            t = temp_data['T'][sel.index]
             self.pointSelected.emit((path, c, z, t))
 
         self.canvas.draw()

@@ -33,7 +33,7 @@ ITEMS = [ALL, INTENSITY, NOISE, SHARPNESS, TEXTURE]
 
 
 class GraphWidget(QGroupBox):
-    pointSelected = Signal(object)
+    pointSelected = Signal(object)  # path, c, z, t or None
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -50,10 +50,9 @@ class GraphWidget(QGroupBox):
 
         self.pca_type_combo = QComboBox()
         self.pca_type_combo.addItems(["", *ITEMS])
-        self.pca_type_combo.currentTextChanged.connect(self._plot)
 
         self.channel_combo = QComboBox()
-        self.channel_combo.currentTextChanged.connect(self._plot)
+        self.channel_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
 
         label = QLabel("Plot:")
         top_layout = QHBoxLayout()
@@ -78,6 +77,10 @@ class GraphWidget(QGroupBox):
         main_layout.addLayout(combo_layout)
         main_layout.addWidget(self.canvas)
 
+        # connections
+        self.pca_type_combo.currentTextChanged.connect(self._plot)
+        self.channel_combo.currentTextChanged.connect(self._plot)
+
     def set_dataframe(self, dataframe: pd.DataFrame) -> None:
         self.feature_pca_df = dataframe
 
@@ -86,20 +89,23 @@ class GraphWidget(QGroupBox):
         with signals_blocked(self.channel_combo):
             self.channel_combo.clear()
             self.channel_combo.addItems(chs)
-        
-        if text := self.pca_type_combo.currentText():
-            self._plot(text)
+            # readjust combo size to fit the text
 
-    def _plot(self, plot_type: str) -> None:
+        self._plot()
+
+    def _plot(self) -> None:
         self.figure.clear()
+
+        plot_type = self.pca_type_combo.currentText()
 
         if plot_type == "" or self.feature_pca_df is None:
             self.canvas.draw()
+            self.pointSelected.emit(None)
             return
         
         ch = self.channel_combo.currentIndex()
         temp_data = self.feature_pca_df[self.feature_pca_df.C==ch]
-        
+
         if plot_type == ALL:
             ax = self.figure.add_subplot(1, 1, 1)
             ax.scatter(temp_data['all_pca_1'], temp_data['all_pca_2'], c='green')
@@ -112,21 +118,15 @@ class GraphWidget(QGroupBox):
             ax.set_xlabel('PCA 1 for Intensity Features')
             ax.set_ylabel('PCA 2 for Intensity Features')
 
-
-
-
-
-
-
-            
-
             cursor = mplcursors.cursor(ax)
 
         else:
+            self.canvas.draw()
+            self.pointSelected.emit(None)
             return
 
         @cursor.connect("add")  # type: ignore [misc]
-        def on_add(sel: mplcursors.Selection, signal: bool = True) -> None:
+        def on_add(sel: mplcursors.Selection) -> None:
             # hide the annotation when the point is deselected
             with contextlib.suppress(AttributeError):
                 sel.annotation.set_visible(False)
@@ -136,13 +136,15 @@ class GraphWidget(QGroupBox):
                     return
                 # reset all face colors to green and set the selected point to magenta
                 colors = ["green"] * len(self.intensity.get_offsets())
-                colors[sel.target.index] = "magenta"
+                colors[sel.index] = "magenta"
                 self.intensity.set_facecolors(colors)
                 self.canvas.draw_idle()
-            if signal:
-                path = self.feature_pca_df['file_path'][sel.target.index]
-                print(f'---------------------- {path}')
-                self.pointSelected.emit(path) # .T, .C, .Z
+
+            path = self.feature_pca_df['file_path'][sel.index]
+            c = self.feature_pca_df['C'][sel.index]
+            z = self.feature_pca_df['Z'][sel.index]
+            t = self.feature_pca_df['T'][sel.index]
+            self.pointSelected.emit((path, c, z, t))
 
         self.on_add = on_add
 

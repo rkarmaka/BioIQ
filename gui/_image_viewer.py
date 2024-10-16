@@ -122,7 +122,7 @@ class ImageViewer(QGroupBox):
 
     def setData(self, image: np.ndarray) -> None:
         """Set the image data."""
-        self._clear()
+        self.clear()
         if image is None:
             return
 
@@ -141,6 +141,13 @@ class ImageViewer(QGroupBox):
     def data(self) -> np.ndarray | None:
         """Return the image data."""
         return self._viewer.image._data if self._viewer.image is not None else None
+    
+    def clear(self) -> None:
+        """Clear the image."""
+        if self._viewer.image is not None:
+            self._viewer.image.parent = None
+            self._viewer.image = None
+        self._viewer.view.camera.set_range(margin=0)
 
     def _on_clims_changed(self, range: tuple[float, float]) -> None:
         """Update the LUT range."""
@@ -157,13 +164,6 @@ class ImageViewer(QGroupBox):
 
     def _reset(self) -> None:
         """Reset the view."""
-        self._viewer.view.camera.set_range(margin=0)
-
-    def _clear(self) -> None:
-        """Clear the image."""
-        if self._viewer.image is not None:
-            self._viewer.image.parent = None
-            self._viewer.image = None
         self._viewer.view.camera.set_range(margin=0)
 
     def _open_with_ndv(self) -> None:

@@ -4,7 +4,6 @@ import pandas as pd
 from bioio import BioImage
 import bioio_nd2
 from ome_types import to_dict
-import csv
 from typing import Any, Dict, List, Optional
 import logging
 
@@ -28,7 +27,6 @@ def read_tiff_metadata(file_path):
         metadata_dict = {tag.name: tag.value for tag in metadata.values()}
 
     return metadata_dict
-
 
 
 class Metadata:
@@ -58,18 +56,18 @@ class Metadata:
 
     def _extract_file_extension(self) -> str:
         """Extracts the file extension from the file path."""
-        return self.file_path.split('/')[-1].split('.')[-1]
+        return self.file_path.split("/")[-1].split(".")[-1]
 
     def _extract_image_name(self) -> str:
         """Extracts the image name (without extension) from the file path."""
-        return self.file_path.split('/')[-1].split('.')[0]
+        return self.file_path.split("/")[-1].split(".")[0]
 
     def _initialize_basic_metadata(self) -> Dict[str, Any]:
         """Creates a dictionary with basic metadata."""
         return {
-            'file_path': self.file_path,
-            'image_name': self.image_name,
-            'extension': self.image_extension
+            "file_path": self.file_path,
+            "image_name": self.image_name,
+            "extension": self.image_extension,
         }
 
     class ReadND2:
@@ -77,7 +75,7 @@ class Metadata:
         A nested class to handle reading and extracting metadata from ND2 files.
         """
 
-        def __init__(self, parent: 'Metadata') -> None:
+        def __init__(self, parent: "Metadata") -> None:
             """Initializes the ReadND2 class with a reference to the parent Metadata instance."""
             self.parent = parent
             self.plane_metadata_list: List[Dict[str, Any]] = []
@@ -87,7 +85,7 @@ class Metadata:
 
         def load_image(self) -> None:
             """Loads the ND2 image using BioImage and the specified reader."""
-            self.image = BioImage(f'{self.parent.file_path}', reader=bioio_nd2.Reader)
+            self.image = BioImage(f"{self.parent.file_path}", reader=bioio_nd2.Reader)
 
         def convert_metadata_to_dict(self) -> None:
             """Converts the image metadata to a dictionary."""
@@ -95,29 +93,33 @@ class Metadata:
 
         def extract_instrument_metadata(self) -> Dict[str, Any]:
             """Extracts instrument-related metadata from the metadata dictionary."""
-            instruments = self.metadata_dict.get('instruments', [])
+            instruments = self.metadata_dict.get("instruments", [])
             if not instruments:
                 raise KeyError("No instruments information found in metadata.")
-            detector = instruments[0].get('detectors', [])[0]
-            objective = instruments[0].get('objectives', [])[0]
+            detector = instruments[0].get("detectors", [])[0]
+            objective = instruments[0].get("objectives", [])[0]
             return {
-                'instrument_model': detector.get('model', 'Unknown Model'),
-                'instrument_serial_number': detector.get('serial_number', 'Unknown Serial Number'),
-                'objective_lens_na': objective.get('lens_na', 'Unknown NA'),
-                'objective_nominal_magnification': objective.get('nominal_magnification', 'Unknown Magnification')
+                "instrument_model": detector.get("model", "Unknown Model"),
+                "instrument_serial_number": detector.get(
+                    "serial_number", "Unknown Serial Number"
+                ),
+                "objective_lens_na": objective.get("lens_na", "Unknown NA"),
+                "objective_nominal_magnification": objective.get(
+                    "nominal_magnification", "Unknown Magnification"
+                ),
             }
 
         def determine_number_of_planes(self) -> None:
             """Retrieves the number of planes in the image."""
-            images = self.metadata_dict.get('images', [])
-            pixels = images[0].get('pixels', {})
-            self.number_of_planes = len(pixels.get('planes', []))
+            images = self.metadata_dict.get("images", [])
+            pixels = images[0].get("pixels", {})
+            self.number_of_planes = len(pixels.get("planes", []))
 
         def extract_planes_metadata(self) -> None:
             """Processes each plane to extract and compile metadata."""
-            images = self.metadata_dict.get('images', [])
-            pixels = images[0].get('pixels', {})
-            planes = pixels.get('planes', [])
+            images = self.metadata_dict.get("images", [])
+            pixels = images[0].get("pixels", {})
+            planes = pixels.get("planes", [])
 
             for i in range(self.number_of_planes):
                 metadata: Dict[str, Any] = self.parent._initialize_basic_metadata()
@@ -150,7 +152,7 @@ class Metadata:
         """
         all_metadata = []
         for file_name in os.listdir(folder_path):
-            if file_name.endswith('.nd2'):
+            if file_name.endswith(".nd2"):
                 file_path = os.path.join(folder_path, file_name)
                 self.set_image_path(file_path)
                 metadata = self.get_nd2_metadata()
@@ -160,7 +162,6 @@ class Metadata:
         # Convert metadata list to a pandas DataFrame and save to CSV
         self.df = pd.DataFrame(all_metadata)
         self.df.to_csv(output_csv, index=False)
-
 
 
 # def read_nd2_metadata(file_path):
@@ -215,5 +216,3 @@ class Metadata:
 #     # print(m)
 #     pd.DataFrame(m).to_csv(f'metadata_{image_name}.csv')
 #     return m
-
-

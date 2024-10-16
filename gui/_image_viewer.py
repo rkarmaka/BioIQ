@@ -15,6 +15,7 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from xarray import DataArray
 from superqt import QLabeledRangeSlider
 from superqt.fonticon import icon
 from superqt.utils import signals_blocked
@@ -76,7 +77,9 @@ class ImageViewer(QGroupBox):
 
         self._viewer = _ImageCanvas(parent=self)
 
-        self._image: None | str | Path = None
+        self._image: None | str | Path = None\
+        
+        self._ndv_file: None | DataArray = None
 
         # LUT controls -----------------------------------------------------------
 
@@ -149,6 +152,14 @@ class ImageViewer(QGroupBox):
             self._viewer.image = None
         self._viewer.view.camera.set_range(margin=0)
 
+    @property
+    def ndv_file(self) -> None | DataArray:
+        return self._ndv_file
+    
+    @ndv_file.setter
+    def ndv_file(self, file: None | DataArray) -> None:
+        self._ndv_file = file
+
     def _on_clims_changed(self, range: tuple[float, float]) -> None:
         """Update the LUT range."""
         self._viewer.clims = range
@@ -167,12 +178,9 @@ class ImageViewer(QGroupBox):
         self._viewer.view.camera.set_range(margin=0)
 
     def _open_with_ndv(self) -> None:
-        # if self._image is None:
-        #     return
-        # data = ...
-        import numpy as np
-        data = np.random.rand(10, 3, 100, 100)
-        ndv = NDViewer(data, parent=self)
+        if self._ndv_file is None:
+            return
+        ndv = NDViewer(self._ndv_file, parent=self)
         ndv.setWindowFlags(Qt.WindowType.Dialog)
         ndv.show()
 

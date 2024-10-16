@@ -116,16 +116,17 @@ class QCMainWindow(QMainWindow):
             return
         path, c, z, t = args
 
-        from rich import print
-        print(self._files.keys())
-
         if path in self._files:
             image = self._files[path].isel(C=c, Z=z, T=t).to_numpy()
         else:
+            print(f"Loading {path}...")
             _file = BioImage(path, reader=bioio_nd2.Reader)
             self._files[path] = _file.xarray_data
             image = _file.xarray_data.isel(C=c, Z=z, T=t).to_numpy()
         self.image_viewer.setData(image)
+        self.image_viewer.ndv_file = self._files[path]
         print(
-            f"file_shape: {self._files[path].shape}, C: {c}, Z: {z}, T: {t}, image shape: {image.shape}, path: {path}"
+            f"-----------\nfile_shape: {self._files[path].shape},\n"
+            f"C: {c}, Z: {z}, T: {t},\nimage shape: {image.shape},\n"
+            f"path: {path}\n-----------"
         )

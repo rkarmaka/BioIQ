@@ -260,6 +260,10 @@ class Noise:
         Estimates the noise level in the image.
         """
         sigma_est = estimate_sigma(self.image, average_sigmas=True)
+
+        if np.isnan(sigma_est):
+            return 0
+
         return sigma_est
     
     def signal_to_noise_ratio(self):
@@ -271,7 +275,7 @@ class Noise:
         # Assuming the background is the darker region
         mean_signal = np.mean(self.image)
         std_noise = np.std(self.image)
-        snr = mean_signal / std_noise if std_noise != 0 else np.inf
+        snr = mean_signal / std_noise if std_noise != 0 else 0
         
         return snr
     
@@ -509,18 +513,22 @@ class TextureFeatures:
             radius,
             method='uniform'
         )
-        n_bins = int(lbp.max() + 1)
+        
+        # Fixed number of bins for uniform LBP
+        n_bins = n_points + 2  # +2 accounts for uniform and non-uniform patterns
+        
         lbp_hist, _ = np.histogram(
             lbp,
             bins=n_bins,
             range=(0, n_bins),
             density=True
         )
-
-        # Store LBP features in a dictionary
-        features = {f'lbp_bin_{i}': lbp_hist[i] for i in range(n_bins)}
+        
+        # Ensure the histogram length is always n_bins, even if some bins have 0 values
+        features = {f'lbp_bin_{i}': lbp_hist[i] if i < len(lbp_hist) else 0 for i in range(n_bins)}
 
         return features
+
     
     def extract_all_features(self):
         """

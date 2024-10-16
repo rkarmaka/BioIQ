@@ -7,14 +7,19 @@ class FeaturePCA:
         self.data = None
         self.pca_results = {}
 
-    def set_data(self, data_path: str):
+    def set_data(self, data: str | pd.DataFrame):
         """
         Loads and sets the data from a CSV file.
 
         Args:
             data_path (str): Path to the CSV file containing the data.
         """
-        self.data = pd.read_csv(data_path)
+        if isinstance(data, str):
+            self.data = pd.read_csv(data)
+        elif isinstance(data, pd.DataFrame):
+            self.data = data
+        else:
+            raise ValueError("Wrong data type...")
     
     def _get_pca(self, df: pd.DataFrame, n_components=2):
         """
@@ -115,6 +120,18 @@ class FeaturePCA:
         self.pca_results['all'] = all_pca
         return all_pca
 
+    def _get_pcas(self):
+        print('Intensity')
+        self.get_intensity_pca()
+        print('Texture')
+        self.get_texture_pca()
+        print('Noise')
+        self.get_noise_pca()
+        print('Sharpness')
+        self.get_sharpness_pca()
+        print('All')
+        self.get_all_pca()
+
     def combine_pcas(self):
         """
         Combines all PCA results into a single dataframe with additional columns for the PCA components.
@@ -124,6 +141,8 @@ class FeaturePCA:
         """
         combined_df = pd.DataFrame()
         combined_df[['file_path', 'image_name', 'extension', 'T', 'C', 'Z', 'histogram']] = self.data[['file_path', 'image_name', 'extension', 'T', 'C', 'Z', 'histogram']]
+
+        self._get_pcas()
 
         # Add all PCA components for each feature group to the combined dataframe
         if 'intensity' in self.pca_results:
@@ -135,10 +154,10 @@ class FeaturePCA:
         if 'sharpness' in self.pca_results:
             combined_df = pd.concat([combined_df, self.pca_results['sharpness'].add_prefix('sharpness_')], axis=1)
         if 'all' in self.pca_results:
-            combined_df = pd.concat([combined_df, self.pca_results['all'].add_prefix('pca_all_')], axis=1)
+            combined_df = pd.concat([combined_df, self.pca_results['all'].add_prefix('all_')], axis=1)
 
         # Convert the combined dataframe to a list of dictionaries
-        return combined_df.to_dict(orient='records')
+        return combined_df
     
 
 class MetadataAnalysis:
@@ -183,9 +202,13 @@ class MetadataAnalysis:
 
     def _get_generic_info(self, column):
         """Generic function to return the number of unique items and their values."""
-        n_unique = self.metadata[column].nunique()
-        unique_values = self.metadata[column].unique()
-        return n_unique, unique_values
+        info = self.metadata.get(column, None)
+        if info is not None:
+            n_unique = info.nunique()
+            unique_values = info.unique()
+            return n_unique, unique_values
+        
+        return None, None
 
     def get_extension(self):
         n_extension, extensions = self._get_generic_info('extension')

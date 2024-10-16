@@ -167,22 +167,11 @@ class MetadataAnalysis:
         self.metadata = None
         self.csv_path = None
 
-    def set_data(self, data: str | pd.DataFrame):
-        """
-        Loads and sets the data from a CSV file.
-
-        Args:
-            data_path (str): Path to the CSV file containing the data.
-        """
-        if isinstance(data, str):
-            self.metadata = pd.read_csv(data)
-        elif isinstance(data, pd.DataFrame):
-            self.metadata = data
-        else:
-            raise ValueError("Wrong data type...")
-
+    def set_csv_path(self, path: str):
+        """Sets the CSV path and loads the data."""
+        self.csv_path = path
+        self.metadata = pd.read_csv(path)
         self.metadata['delta_time'] = self.metadata.groupby(['image_name', 'the_c'])['delta_t'].diff()
-
 
     def _convert_time(self):
         df = self.metadata
@@ -201,34 +190,45 @@ class MetadataAnalysis:
 
     def _get_generic_info(self, column):
         """Generic function to return the number of unique items and their values."""
-        info = self.metadata.get(column, None)
-        if info is not None:
-            n_unique = info.nunique()
-            unique_values = info.unique()
-            return n_unique, unique_values
-
-        return None, None
+        n_unique = self.metadata[column].nunique()
+        unique_values = self.metadata[column].unique()
+        return n_unique, unique_values
 
     def get_extension(self):
         n_extension, extensions = self._get_generic_info('extension')
+        
         if n_extension > 1:
             return f"[x] More than one image type found. Found extensions are {extensions}."
         return f"[v] All images are of {extensions[0]} type."
 
     def get_instrument(self):
         n_instrument, instruments = self._get_generic_info('instrument_model')
+
+        if n_instrument is None:
+            return f"[x] Could not find the instrument name."
+        
         if n_instrument > 1:
             return f"[x] More than one instrument found. Found instruments are {instruments}."
+        
         return f"[v] All images are acquired using {instruments[0]}."
 
     def get_lensNA(self):
         n_lensNA, lensNA = self._get_generic_info('objective_lens_na')
+
+        if n_lensNA is None:
+            return f"[x] Could not find the lens objective."
+        
         if n_lensNA > 1:
-            return f"[x] More than single lens NA found. Found lens NA are {lensNA}."
-        return f"[v] All images are acquired with {lensNA[0]}."
+            return f"[x] More than single lens objective found. Found lens objectives are {lensNA}."
+        
+        return f"[v] All images are acquired with {lensNA[0]} objective."
 
     def get_magnification(self):
         n_magnification, magnifications = self._get_generic_info('objective_nominal_magnification')
+
+        if n_magnification is None:
+            return f"[x] Could not find the lens magnification."
+        
         if n_magnification > 1:
             return f"[x] More than single magnification found. Found magnifications are {magnifications}."
         return f"[v] All images are acquired with {int(magnifications[0])}x."
@@ -236,66 +236,90 @@ class MetadataAnalysis:
     def get_bit_depth(self):
         n_bit_depth, bit_depths = self._get_generic_info('significant_bits')
         if n_bit_depth is None:
-            return f"[x] Can't find bit depth."
+            return f"[x] Could not find bit depth."
+        
         if n_bit_depth > 1:
             return f"[x] More than single bit depth found. Found bit depths are {bit_depths}."
         return f"[v] All images are acquired with {bit_depths[0]}."
 
     def get_size_x(self):
         n_size_x, size_x = self._get_generic_info('size_x')
+        if n_size_x is None:
+            return f"[x] Could not find image width."
+        
         if n_size_x > 1:
-            return f"[x] Different image width found."
+            return f"[x] Different image widths found."
         return f"[v] Images have width {size_x[0]}."
 
     def get_size_y(self):
         n_size_y, size_y = self._get_generic_info('size_y')
+        if n_size_y is None:
+            return f"[x] Could not find image height."
+        
         if n_size_y > 1:
-            return f"[x] Different image height found."
+            return f"[x] Different image heights found."
         return f"[v] Images have height {size_y[0]}."
 
     def get_size_z(self):
         n_size_z, size_z = self._get_generic_info('size_z')
-        # if n_size_z > 1:
-        #     return f"[?] 3D z-stack with different z-depth."
-        # elif size_z != 1:
-        #     return f"[?] 3D z-stack with single z-depth of {size_z[0]}."
+        if n_size_z is None:
+            return f"[x] Could not find z-depth."
+        
+        if n_size_z > 1:
+            return f"[?] 3D z-stack with different z-depth."
+        elif size_z != 1:
+            return f"[?] 3D z-stack with single z-depth of {size_z[0]}."
         return f"[?] Not a z-stack."
 
     def get_size_t(self):
         n_size_t, size_t = self._get_generic_info('size_t')
-        # if n_size_t > 1:
-        #     return f"[?] Time series data with different time."
-        # elif size_t != 1:
-        #     return f"[?] Time series data with {size_t[0]} frames per image."
+        if n_size_t is None:
+            return f"[?] Could not find t or not a time series."
+        if n_size_t > 1:
+            return f"[?] Time series data with different time."
+        elif size_t != 1:
+            return f"[?] Time series data with {size_t[0]} frames per image."
         return f"[?] Not a time series data."
 
     def get_size_c(self):
         n_size_c, size_c = self._get_generic_info('size_c')
-        # if n_size_c > 1:
-        #     return f"[x] Different number of channels found."
-        # elif size_c == 1:
-        #     return f"[?] Single channel image."
-        # return f"[v] Multi-channel image with {size_c[0]} channels per image."
-        return f"[v] Multi-channel image with channels per image."
+        if n_size_c is None:
+            return f"[x] Could not find number of channels."
+        
+        if n_size_c > 1:
+            return f"[x] Different number of channels found."
+        elif size_c == 1:
+            return f"[?] Single channel image."
+        return f"[v] Multi-channel image with {size_c[0]} channels per image."
 
     def get_physical_x(self):
         n_physical_size_x, physical_size_x = self._get_generic_info('physical_size_x')
+        if n_physical_size_x is None:
+            return f"[x] Could not find physical x size."
+        
         if n_physical_size_x > 1:
             return f"[x] Different physical size x found. Found physical size x are {np.round(physical_size_x, 4)}."
         return f"[v] All images acquired have {np.round(physical_size_x[0], 4)} micrometers physical size x."
 
     def get_physical_y(self):
         n_physical_size_y, physical_size_y = self._get_generic_info('physical_size_y')
+        if n_physical_size_y is None:
+            return f"[x] Could not find physical y size."
+        
         if n_physical_size_y > 1:
             return f"[x] Different physical size y found. Found physical size y are {np.round(physical_size_y, 4)}."
         return f"[v] All images acquired have {np.round(physical_size_y[0], 4)} micrometers physical size y."
 
     def get_delta_t(self):
-        diviser, unit = self._convert_time()
-        self.metadata['delta_time'] = np.round(self.metadata['delta_time'] / diviser, 2)
-        mean_time = self.metadata['delta_time'].mean()
-        std_time = self.metadata['delta_time'].std()
-        return f"[v] Time between frames: {np.round(mean_time, 4)} +/- {np.round(std_time, 4)} {unit}s."
+        try:
+            diviser, unit = self._convert_time()
+            self.metadata['delta_time'] = np.round(self.metadata['delta_time'] / diviser, 2)
+            mean_time = self.metadata['delta_time'].mean()
+            std_time = self.metadata['delta_time'].std()
+            return f"[v] Time between frames: {np.round(mean_time, 4)} +/- {np.round(std_time, 4)} {unit}s."
+        
+        except:
+            return f"[x] Cound not find time delta."
 
     def generate_report(self):
         """Generates a report by calling all functions and combining their outputs into a list of strings."""

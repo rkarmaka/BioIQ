@@ -40,8 +40,6 @@ class GraphWidget(QGroupBox):
 
         self.feature_pca_df: pd.DataFrame | None = None
 
-        self.on_add: Callable | None = None
-
         self.all: Axes | None = None
         self.intensity: Axes | None = None
         self.noise: Axes | None = None
@@ -89,7 +87,6 @@ class GraphWidget(QGroupBox):
         with signals_blocked(self.channel_combo):
             self.channel_combo.clear()
             self.channel_combo.addItems(chs)
-            # readjust combo size to fit the text
 
         self._plot()
 
@@ -104,72 +101,76 @@ class GraphWidget(QGroupBox):
             return
         
         ch = self.channel_combo.currentIndex()
-        temp_data = self.feature_pca_df[self.feature_pca_df.C==ch]
+        temp_data = self.feature_pca_df[self.feature_pca_df.C==ch].reset_index()
+        ax = self.figure.add_subplot(1, 1, 1)
 
         if plot_type == ALL:
-            ax = self.figure.add_subplot(1, 1, 1)
-            ax.scatter(temp_data['all_pca_1'], temp_data['all_pca_2'], c='green')
+            self.all = ax.scatter(temp_data['all_pca_1'], temp_data['all_pca_2'], c='green')
             ax.set_xlabel('PCA 1 for All Features')
             ax.set_ylabel('PCA 2 for All Features')
-
-        if plot_type == INTENSITY:
-            ax = self.figure.add_subplot(1, 1, 1)
+        
+        elif plot_type == INTENSITY:
             self.intensity = ax.scatter(temp_data['intensity_pca_1'], temp_data['intensity_pca_2'], c='green')
             ax.set_xlabel('PCA 1 for Intensity Features')
             ax.set_ylabel('PCA 2 for Intensity Features')
-
-            cursor = mplcursors.cursor(ax)
-
-        if plot_type == NOISE:
-            ax = self.figure.add_subplot(1, 1, 1)
-            self.intensity = ax.scatter(temp_data['noise_noise_level'], temp_data['noise_snr'], c='green')
+        
+        elif plot_type == NOISE:
+            self.noise = ax.scatter(temp_data['noise_noise_level'], temp_data['noise_snr'], c='green')
             ax.set_xlabel('Noise Level')
             ax.set_ylabel('Signal to Noise Ratio')
-
-            cursor = mplcursors.cursor(ax)
-
-        if plot_type == SHARPNESS:
-            ax = self.figure.add_subplot(1, 1, 1)
-            self.intensity = ax.scatter(temp_data['sharpness_pca_1'], temp_data['sharpness_pca_2'], c='green')
+        
+        elif plot_type == SHARPNESS:
+            self.sharpness = ax.scatter(temp_data['sharpness_pca_1'], temp_data['sharpness_pca_2'], c='green')
             ax.set_xlabel('PCA 1 for Sharpness Features')
             ax.set_ylabel('PCA 2 for Sharpness Features')
-
-            cursor = mplcursors.cursor(ax)
-
-        if plot_type == TEXTURE:
-            ax = self.figure.add_subplot(1, 1, 1)
-            self.intensity = ax.scatter(temp_data['texture_pca_1'], temp_data['texture_pca_2'], c='green')
+        
+        elif plot_type == TEXTURE:
+            self.texture = ax.scatter(temp_data['texture_pca_1'], temp_data['texture_pca_2'], c='green')
             ax.set_xlabel('PCA 1 for Texture Features')
             ax.set_ylabel('PCA 2 for Texture Features')
-
-            cursor = mplcursors.cursor(ax)
 
         else:
             self.canvas.draw()
             self.pointSelected.emit(None)
             return
 
+        cursor = mplcursors.cursor(ax)
+        
+
         @cursor.connect("add")  # type: ignore [misc]
         def on_add(sel: mplcursors.Selection) -> None:
             # hide the annotation when the point is deselected
             with contextlib.suppress(AttributeError):
                 sel.annotation.set_visible(False)
+            print(plot_type)
             if plot_type:
-                graph = self.intensity if plot_type == INTENSITY else None
+                graph = self._get_graph(plot_type)
                 if graph is None:
                     return
                 # reset all face colors to green and set the selected point to magenta
-                colors = ["green"] * len(self.intensity.get_offsets())
+                colors = ["green"] * len(graph.get_offsets())
                 colors[sel.index] = "magenta"
-                self.intensity.set_facecolors(colors)
+                graph.set_facecolors(colors)
                 self.canvas.draw_idle()
 
-            path = self.feature_pca_df['file_path'][sel.index]
-            c = self.feature_pca_df['C'][sel.index]
-            z = self.feature_pca_df['Z'][sel.index]
-            t = self.feature_pca_df['T'][sel.index]
+
+            path = temp_data['file_path'][sel.index]
+            c = temp_data['C'][sel.index]
+            z = temp_data['Z'][sel.index]
+            t = temp_data['T'][sel.index]
             self.pointSelected.emit((path, c, z, t))
 
-        self.on_add = on_add
-
         self.canvas.draw()
+    
+    def _get_graph(self, plot_type: str) -> Axes | None:
+        if plot_type == INTENSITY:
+            return self.intensity
+        if plot_type == NOISE:
+            return self.noise
+        if plot_type == SHARPNESS:
+            return self.sharpness
+        if plot_type == TEXTURE:
+            return self.texture
+        if plot_type == ALL:
+            return self.all
+        return None

@@ -109,7 +109,7 @@ class QCMainWindow(QMainWindow):
             self.graph.set_dataframe(self.feature_pca_df)
 
             self.metadata_analysis = MetadataAnalysis()
-            self.metadata_analysis.set_data(pd.read_csv(csv_path))
+            self.metadata_analysis.set_data(pd.read_csv(meta_path))
             self.metadata_analysis_list = self.metadata_analysis.generate_report()
             self.metadata_summary.setText(self.metadata_analysis_list)
 

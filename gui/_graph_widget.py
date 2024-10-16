@@ -120,6 +120,30 @@ class GraphWidget(QGroupBox):
 
             cursor = mplcursors.cursor(ax)
 
+        if plot_type == NOISE:
+            ax = self.figure.add_subplot(1, 1, 1)
+            self.intensity = ax.scatter(temp_data['noise_noise_level'], temp_data['noise_snr'], c='green')
+            ax.set_xlabel('Noise Level')
+            ax.set_ylabel('Signal to Noise Ratio')
+
+            cursor = mplcursors.cursor(ax)
+
+        if plot_type == SHARPNESS:
+            ax = self.figure.add_subplot(1, 1, 1)
+            self.intensity = ax.scatter(temp_data['sharpness_pca_1'], temp_data['sharpness_pca_2'], c='green')
+            ax.set_xlabel('PCA 1 for Sharpness Features')
+            ax.set_ylabel('PCA 2 for Sharpness Features')
+
+            cursor = mplcursors.cursor(ax)
+
+        if plot_type == TEXTURE:
+            ax = self.figure.add_subplot(1, 1, 1)
+            self.intensity = ax.scatter(temp_data['texture_pca_1'], temp_data['texture_pca_2'], c='green')
+            ax.set_xlabel('PCA 1 for Texture Features')
+            ax.set_ylabel('PCA 2 for Texture Features')
+
+            cursor = mplcursors.cursor(ax)
+
         else:
             self.canvas.draw()
             self.pointSelected.emit(None)

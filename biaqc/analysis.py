@@ -121,15 +121,10 @@ class FeaturePCA:
         return all_pca
 
     def _get_pcas(self):
-        print('Intensity')
         self.get_intensity_pca()
-        print('Texture')
         self.get_texture_pca()
-        print('Noise')
         self.get_noise_pca()
-        print('Sharpness')
         self.get_sharpness_pca()
-        print('All')
         self.get_all_pca()
 
     def combine_pcas(self):
@@ -182,6 +177,7 @@ class MetadataAnalysis:
             self.metadata = metadata
         else:
             raise ValueError("Wrong data type...")
+        
         
         self.metadata['delta_time'] = self.metadata.groupby(['image_name', 'the_c'])['delta_t'].diff()
 

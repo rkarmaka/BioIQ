@@ -16,4 +16,5 @@
     fonticon-materialdesignicons6
     vispy
     ndv
+    tqdm
     pyqt6  # to remove

@@ -4,14 +4,9 @@
 # Ignore enviroment
 envs
 
-# Ignore Flask app files
-/templates
-/static
-/docs
 
 # Ignore test files
 /biaqc/test.ipynb
 /biaqc/nd2_metadata_new.csv
-/_widgets
-/tests/__pycache__/
 /biaqc/__pycache__/
+/tests/__pycache__/

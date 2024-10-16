@@ -313,7 +313,7 @@ class IntensityFeatures:
         self.normalized_image = self._normalize_image()
 
     def _get_bit_depth(self):
-        return 12
+        return None
         # bit_depth = int(np.ceil(np.log2(np.max(self.image))))
         # if bit_depth<=8:
         #     return 8

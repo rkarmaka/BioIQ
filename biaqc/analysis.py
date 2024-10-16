@@ -150,10 +150,20 @@ class MetadataAnalysis:
         self.metadata = None
         self.csv_path = None
 
-    def set_csv_path(self, path: str):
-        """Sets the CSV path and loads the data."""
-        self.csv_path = path
-        self.metadata = pd.read_csv(path)
+    def set_data(self, metadata: str | pd.DataFrame):
+        """
+        Loads and sets the data from a CSV file.
+
+        Args:
+            data_path (str): Path to the CSV file containing the data.
+        """
+        if isinstance(metadata, str):
+            self.metadata = pd.read_csv(metadata)
+        elif isinstance(metadata, pd.DataFrame):
+            self.metadata = metadata
+        else:
+            raise ValueError("Wrong data type...")
+        
         self.metadata['delta_time'] = self.metadata.groupby(['image_name', 'the_c'])['delta_t'].diff()
 
     def _convert_time(self):

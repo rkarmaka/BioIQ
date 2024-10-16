@@ -7,8 +7,8 @@ from datetime import datetime
 from bioio import BioImage
 import bioio_nd2
 import pandas as pd
-
-from feature_extraction import IntensityFeatures, Noise, Sharpness, TextureFeatures
+from tqdm import tqdm
+from .feature_extraction import IntensityFeatures, Noise, Sharpness, TextureFeatures
 
 
 from typing import Any, Dict, List, Optional
@@ -108,6 +108,7 @@ class ND2ImageProcessor:
         self.file_path: Optional[str] = None
         self.image_extension: Optional[str] = None
         self.image_name: Optional[str] = None
+        self.df: pd.DataFrame = None
 
     def set_image_path(self, file_path: str) -> None:
         """
@@ -238,7 +239,7 @@ class ND2ImageProcessor:
         all_results = []
 
         # Iterate through all files in the folder
-        for file_name in os.listdir(folder_path):
+        for file_name in tqdm(os.listdir(folder_path), desc='processing file'):
             if file_name.endswith('.nd2'):  # Process only ND2 files
                 self.set_image_path(os.path.join(folder_path, file_name))
                 image_results = self.process_image()
@@ -246,5 +247,5 @@ class ND2ImageProcessor:
 
         # Save results to CSV
         # Convert metadata list to a pandas DataFrame and save to CSV
-        df = pd.DataFrame(all_results)
-        df.to_csv(output_csv, index=False)
+        self.df = pd.DataFrame(all_results)
+        self.df.to_csv(output_csv, index=False)

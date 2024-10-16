@@ -218,13 +218,25 @@ class Sharpness:
         
         # Convert to float32 for precision
         img_float = np.float32(self.image)
+
+        # Step 2: Apply Fourier Transform
         f = np.fft.fft2(img_float)
+
+        # Step 3: Shift the zero-frequency component to the center
         fshift = np.fft.fftshift(f)
 
         # Compute the magnitude spectrum
         magnitude_spectrum = 20 * np.log(np.abs(fshift) + 1)  # Added 1 to avoid log(0)
 
         return np.mean(magnitude_spectrum)
+    
+    def extract_all_features(self):
+        return {
+            'laplacian' : self.variance_of_laplacian(),
+            'tenengrad' : self.tenengrad(),
+            'brenners_gradient' : self.brenners_gradient(),
+            'fourier_magnitude' : self.fft_sharpness()
+        }
     
 
 
@@ -263,6 +275,12 @@ class Noise:
         
         return snr
     
+    def extract_all_features(self):
+        return {
+            'noise_level' : self.noise_level_estimation(),
+            'snr' : self.signal_to_noise_ratio()
+        }
+    
 
 class IntensityFeatures:
     def __init__(self, image=None, bit_depth=None):
@@ -291,16 +309,17 @@ class IntensityFeatures:
         self.normalized_image = self._normalize_image()
 
     def _get_bit_depth(self):
-        bit_depth = int(np.ceil(np.log2(np.max(self.image))))
-        if bit_depth<=8:
-            return 8
-        elif bit_depth<=12:
-            return 12
-        elif bit_depth<=16:
-            return 16
-        else:
-            print('The image is more than 16-bit.')
-            return None
+        return 12
+        # bit_depth = int(np.ceil(np.log2(np.max(self.image))))
+        # if bit_depth<=8:
+        #     return 8
+        # elif bit_depth<=12:
+        #     return 12
+        # elif bit_depth<=16:
+        #     return 16
+        # else:
+        #     print('The image is more than 16-bit.')
+        #     return None
 
     def _normalize_image(self):
         """
@@ -358,11 +377,19 @@ class IntensityFeatures:
 
     def skewness(self):
         """Calculates the skewness of the image intensity distribution."""
-        return skew(self.normalized_image.flatten())
+        sk = skew(self.normalized_image.flatten())
+        if np.isnan(sk):
+            return 0
+
+        return sk
 
     def kurtosis(self):
         """Calculates the kurtosis of the image intensity distribution."""
-        return kurtosis(self.normalized_image.flatten())
+        kurt =  kurtosis(self.normalized_image.flatten())
+        if np.isnan(kurt):
+            return 0
+    
+        return kurt
 
     def extract_all_features(self):
         """
@@ -494,3 +521,24 @@ class TextureFeatures:
         features = {f'lbp_bin_{i}': lbp_hist[i] for i in range(n_bins)}
 
         return features
+    
+    def extract_all_features(self):
+        """
+        Extracts all texture features from the image by combining GLCM and LBP features.
+
+        Returns:
+        - dict: A dictionary containing all the extracted texture features.
+        """
+        if self.image is None:
+            raise ValueError("Image not set. Use set_image method to set the image.")
+
+        # Extract GLCM features
+        glcm_feats = self.glcm_features()
+
+        # Extract LBP features
+        lbp_feats = self.lbp_features()
+
+        # Combine the features
+        all_features = {**glcm_feats, **lbp_feats}
+
+        return all_features

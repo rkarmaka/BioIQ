@@ -1,3 +1,4 @@
+import os
 import tifffile
 import pandas as pd
 from bioio import BioImage
@@ -42,6 +43,7 @@ class Metadata:
         self.file_path: Optional[str] = None
         self.image_extension: Optional[str] = None
         self.image_name: Optional[str] = None
+        self.df: pd.DataFrame = None
 
     def set_image_path(self, file_path: str) -> None:
         """
@@ -156,8 +158,8 @@ class Metadata:
 
         # Save results to CSV
         # Convert metadata list to a pandas DataFrame and save to CSV
-        df = pd.DataFrame(all_metadata)
-        df.to_csv(output_csv, index=False)
+        self.df = pd.DataFrame(all_metadata)
+        self.df.to_csv(output_csv, index=False)
 
 
 

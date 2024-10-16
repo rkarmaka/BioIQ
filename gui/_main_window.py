@@ -1,21 +1,14 @@
-from qtpy.QtWidgets import QWidget, QMainWindow, QGridLayout, QMenuBar, QSplitter, QHBoxLayout
+import os
+import pandas as pd
+from qtpy.QtWidgets import QWidget, QMainWindow, QGridLayout, QMenuBar, QSplitter, QHBoxLayout, QFileDialog
 from qtpy.QtCore import Qt
 from ._graph_widget import GraphWidget
 from ._image_viewer import ImageViewer
 from ._metadata_summary_widget import MetaSummaryWidget
 
-
-class MenuBar(QMenuBar):
-    def __init__(self, parent: QWidget | None = None):
-
-        super().__init__(parent)
-        self.files = self.addMenu('Files')
-        self.opened = self.files.addAction('Open Folder')
-
-        self.opened.triggered.connect(self.open_text)
-
-    def open_text(self):
-        print('Opening')
+from biaqc.metadata import Metadata
+from biaqc.utils import ND2ImageProcessor
+from biaqc.analysis import FeaturePCA, MetadataAnalysis
 
 
 class QCMainWindow(QMainWindow):
@@ -24,8 +17,19 @@ class QCMainWindow(QMainWindow):
 
         self.setWindowTitle("QC Main Window")
 
-        self.menubar = MenuBar(self)
+        self.nd2_processor: ND2ImageProcessor | None = None
+        self.metadata: Metadata | None = None
+        self.feature_pca: FeaturePCA | None = None
+        self.feature_pca_df: pd.DataFrame | None = None
+        self.metadata_analysis: MetadataAnalysis | None = None
+        self.metadata_analysis_list: list[str] | None = None
+
+        self.menubar = QMenuBar(self)
         self.setMenuBar(self.menubar)
+
+        self.files = self.menubar.addMenu('Files')
+        self.opened = self.files.addAction('Open Folder and Run Analysis')
+        self.opened.triggered.connect(self._on_open)
 
         self.central_widget = QWidget(self)
         self.setCentralWidget(self.central_widget)
@@ -48,3 +52,25 @@ class QCMainWindow(QMainWindow):
 
         layout = QHBoxLayout(self.central_widget)
         layout.addWidget(splitter2)
+
+    def _on_open(self):
+        folder_path = QFileDialog.getExistingDirectory(self, "Select Folder")
+        
+        if folder_path:
+            self.nd2_processor = ND2ImageProcessor()
+            csv_file = folder_path.split('/')[-1]
+            self.nd2_processor.process_folder(folder_path=folder_path, output_csv=f'{folder_path}/{csv_file}_features.csv')
+            self.feature_pca = FeaturePCA()
+            self.feature_pca.set_data(self.nd2_processor.df)
+            self.feature_pca_df = self.feature_pca.combine_pcas()
+
+
+            self.graph.set_dataframe(self.feature_pca_df)
+
+            self.metadata = Metadata()
+            self.metadata.process_folder(folder_path=folder_path, output_csv=f'{folder_path}/{csv_file}_metadata.csv')
+            self.metadata_analysis = MetadataAnalysis()
+            self.metadata_analysis.set_data(self.metadata.df)
+            self.metadata_analysis_list = self.metadata_analysis.generate_report()
+
+            self.metadata_summary.setText(self.metadata_analysis_list)

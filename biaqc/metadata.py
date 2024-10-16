@@ -126,7 +126,19 @@ class Metadata:
                 "physical_size_z": pixels.get("physical_size_z", [])
             }
 
+        def extract_channels_metadata(self) -> Dict[str, Any]:
+            """Extracts pixel-related metadata from the metadata dictionary."""
+            images = self.metadata_dict.get("images", [])
+            pixels = images[0].get("pixels", {})
+            channels = pixels.get("channels", {})
+            channels_dict = {}
 
+            for idx, channel in enumerate(channels):
+                channels_dict[f'channel_{idx}_name'] = channel['name']
+                channels_dict[f'channel_{idx}_excitation_wavelength'] = channel['excitation_wavelength']
+                channels_dict[f'channel_{idx}_emission_wavelength'] = channel['emission_wavelength']
+
+            return channels_dict
 
         def determine_number_of_planes(self) -> None:
             """Retrieves the number of planes in the image."""
@@ -142,10 +154,13 @@ class Metadata:
 
             for i in range(self.number_of_planes):
                 metadata: Dict[str, Any] = self.parent._initialize_basic_metadata()
+                metadata.update({"acquisition_date": images[0].get("acquisition_date", [])})
                 instrument_metadata = self.extract_instrument_metadata()
                 metadata.update(instrument_metadata)
                 pixels_metadata = self.extract_pixels_metadata()
                 metadata.update(pixels_metadata)
+                channels_metadata = self.extract_channels_metadata()
+                metadata.update(channels_metadata)
                 plane_metadata = planes[i]
                 metadata.update(plane_metadata)
                 self.plane_metadata_list.append(metadata)

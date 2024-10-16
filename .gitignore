@@ -12,13 +12,6 @@ envs
 # Ignore test files
 /biaqc/test.ipynb
 /biaqc/nd2_metadata_new.csv
-/biaqc/__pycache__
 /_widgets
-/tests/__pycache__
-/tests/__pycache__/test_feature_extraction.cpython-311.pyc
-/tests/__pycache__/test_metadata.cpython-311.pyc
-/tests/__pycache__/test_qc.cpython-311.pyc
-/biaqc/__pycache__/feature_extraction.cpython-311.pyc
-/biaqc/__pycache__/metadata.cpython-311.pyc
-/biaqc/__pycache__/utils.cpython-311.pyc
+/tests/__pycache__/
 /biaqc/__pycache__/

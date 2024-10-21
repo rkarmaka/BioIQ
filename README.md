@@ -46,7 +46,7 @@ Example usage of the package can be found in the [examples](examples/example_usa
 
 ## Contributing
 
-Contributions are welcome! Please see the [CONTRIBUTING.md](CONtributing.md) file for guidelines on how to contribute to this project.
+Contributions are welcome! Please see the [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines on how to contribute to this project.
 
 ## License
 

@@ -1,5 +1,6 @@
 # Bio-image Analysis Quality Control
-![logo](_assets/icon.ico)
+![logo](_assets/icon.png)
+
 This repository contains a Python package to perform automatic quality control for bioimage analysis.
 
 ## Table of Contents

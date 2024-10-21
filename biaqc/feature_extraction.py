@@ -239,7 +239,6 @@ class Sharpness:
         }
     
 
-
 class Noise:
     image: np.ndarray | None = None
 

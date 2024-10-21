@@ -8,6 +8,7 @@ from qtpy.QtWidgets import (
     QFileDialog,
 )
 from qtpy.QtCore import Qt
+from qtpy.QtGui import QIcon
 from ._graph_widget import GraphWidget
 from ._image_viewer import ImageViewer
 from ._metadata_summary_widget import MetaSummaryWidget
@@ -25,7 +26,6 @@ class QCMainWindow(QMainWindow):
         super().__init__(parent)
 
         self.setWindowTitle("QC Main Window")
-
         self.feature_pca_df: pd.DataFrame | None = None
         self.metadata_analysis_list: list[str] | None = None
 

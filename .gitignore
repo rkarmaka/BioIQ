@@ -8,5 +8,4 @@ envs
 # Ignore test files
 /biaqc/test.ipynb
 /biaqc/nd2_metadata_new.csv
-/biaqc/__pycache__/
-/tests/__pycache__/
+*.pyc

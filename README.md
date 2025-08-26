@@ -1,4 +1,4 @@
-# Bio-image Analysis Quality Control
+# Bioimage Analysis Quality Control (BioIQ)
 <img src="_assets/icon.png" alt="icon" width="150" style="align: center"/>
 
 This repository contains a Python package to perform automatic quality control for bioimage analysis.
